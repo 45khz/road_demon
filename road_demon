@@ -1,8 +1,9 @@
 ###################  Made by 45khz   ####################
 ########## ROADWARRIOR DEAMONSAW ROUTER SETUP ###########
-## wget URL -O road_demon.sh && bash road_demon.sh ##
+########## https://github.com/45khz/road_demon ##########
+#### wget URL -O road_demon.sh && bash road_demon.sh ####
 
-#vars
+#Vars
 FILEPATHDS="$HOME"
 ROUTER_ADDRESS="0.0.0.0"
 HOME_ADDRESS="127.0.0.1"
@@ -10,11 +11,11 @@ WAN_ADDRESS="$(wget -qO- ipv4.icanhazip.com)"
 LAN_ADDRESS="$(ip addr | grep 'inet' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)"
 PORT_NUMBER="8080"
 
-#start q
+#Start q
 read -e -p "Enter where you want Demonsaw to be installed if untouched Default path= " -i "$FILEPATHDS" FILEPATHDS
 echo "You entered: $FILEPATHDS"
 
-#get tha ipz
+#Get tha ipz
 echo "Enter ip for the router"
  echo "   1) WAN $WAN_ADDRESS (External)"
  echo "   2) LAN $LAN_ADDRESS (Internal)"
@@ -32,6 +33,7 @@ ROUTER_ADDRESS="$HOME_ADDRESS"
 ;;
 esac
 
+#Port select
 read -e -p "Enter what port Demonsaw will talk on (most be 1024 or above otherwise root is needed) untouched Default port=:" -i "$PORT_NUMBER" PORT_NUMBER
 echo "You entered: $PORT_NUMBER"
 
@@ -44,15 +46,16 @@ if [ ! -d $FILEPATHDS/demonsaw ]; then
 else echo "you already have demonsaw downloaded and extracted it nice"
 fi
 
-#Make .toml
+#Check for .toml
 if [ ! -f $FILEPATHDS/demonsaw/demonsaw.toml ]; then
  echo "demonsaw.toml not found, lets fix that!"
  touch $FILEPATHDS/demonsaw/demonsaw.toml
  else echo "looks like you already have the config file (demonsaw.toml) let update"
 fi
-#make the .toml file
+
+#Make the .toml file
 (
-echo -e "[demonsaw]\nversion = 0\n[[router]]\naddress = '$ROUTER_ADDRESS'\nport = $PORT_NUMBER\nthreads = 128\n[router.network]\nredirect = 'https://demonsaw.com'\nmotd = 'Roadwarriors Demonsaw/Enigma router'\n" )>$FILEPATHDS/demonsaw/demonsaw.toml
+echo -e "[demonsaw]\nversion = 0\n[[router]]\naddress = '$ROUTER_ADDRESS'\nport = $PORT_NUMBER\nthreads = 128\n[router.network]\nredirect = 'https://demonsaw.com'\nmotd = 'Roadwarriors Demonsaw/Enigma router'\n[[router.transfer]]\nport = $PORT_NUMBER\nname = '[transfer router 1]'\naddress = '$ROUTER_ADDRESS'\n" )>$FILEPATHDS/demonsaw/demonsaw.toml
 
 echo "Config Done"
 echo "Your router is going to be avalible with ip=$ROUTER_ADDRESS port=$PORT_NUMBER"
