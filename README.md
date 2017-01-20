@@ -8,3 +8,4 @@ or send me a pm over at router.demonsaw.com
 # To-do #
 * Portforward
 * better background process (screen)
+* Router group settings
