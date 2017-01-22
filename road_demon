@@ -1,26 +1,56 @@
 ###################  Made by 45khz   ####################
 ########## ROADWARRIOR DEAMONSAW ROUTER SETUP ###########
 ########## https://github.com/45khz/road_demon ##########
-#### wget URL -O road_demon.sh && bash road_demon.sh ####
 
 #Vars
 FILEPATHDS="$HOME"
+USER="non-root"
 ROUTER_ADDRESS="0.0.0.0"
 HOME_ADDRESS="127.0.0.1"
 WAN_ADDRESS="$(wget -qO- ipv4.icanhazip.com)"
 LAN_ADDRESS="$(ip addr | grep 'inet' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)"
+TUN_ADRESS="$(ip addr | grep 'tun0' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)"
 PORT_NUMBER="8080"
 
-#Start q
+clear
+echo "Welcom to the Roadwarrior installation of Demonsaw router"
+echo ""
+#Install path
 read -e -p "Enter where you want Demonsaw to be installed if untouched Default path= " -i "$FILEPATHDS" FILEPATHDS
 echo "You entered: $FILEPATHDS"
 
+#Get teh Demons
+if [ ! -f $FILEPATHDS/demonsaw/demonsaw_cli ]; then
+ mkdir $FILEPATHDS/demonsaw
+ wget https://demonsaw.com/download/3.1.0/demonsaw_debian_64.tar.gz -P /tmp/
+ tar -xvzf /tmp/demonsaw_debian_64.tar.gz -C $FILEPATHDS/demonsaw/
+ rm /tmp/demonsaw_debian_64.tar.gz*
+else echo "you already have demonsaw downloaded and extracted it nice"
+fi
+
+#Make .toml
+if [ ! -f $FILEPATHDS/demonsaw/demonsaw.toml ]; then
+ echo "demonsaw.toml not found, lets fix that!"
+ touch $FILEPATHDS/demonsaw/demonsaw.toml
+ else echo "looks like you already have the config file (demonsaw.toml) let update"
+fi
+clear
+
 #Get tha ipz
-echo "Enter ip for the router"
- echo "   1) WAN $WAN_ADDRESS (External)"
- echo "   2) LAN $LAN_ADDRESS (Internal)"
- echo "   3) LOCAL $HOME_ADDRESS (Localhost)"
-  read -p "Select an option [1-3]:" ROUTER_ADDRESS
+echo "-- WAN if the router is hosted on VPS"
+echo ""
+echo "-- LAN if the router is hosted from your home (needs portforward on the router)"
+echo ""
+echo "-- VPN if the router is hosted from home over a VPN (VPN needs to support portforward) "
+echo ""
+echo "-- Local for tesing only"
+echo ""
+echo "Enter how the router are going be hosted"
+ echo "   1) WAN $WAN_ADDRESS (External VPS)"
+ echo "   2) LAN $LAN_ADDRESS (Internal Home)"
+ echo "   3) VPN $TUN_ADRESS (VPN with portforward)"
+ echo "   4) LOCAL $HOME_ADDRESS (Localhost)"
+  read -p "Select an option [1-4]:" ROUTER_ADDRESS
  case $ROUTER_ADDRESS in
 1)
 ROUTER_ADDRESS="$WAN_ADDRESS"
@@ -29,61 +59,64 @@ ROUTER_ADDRESS="$WAN_ADDRESS"
 ROUTER_ADDRESS="$LAN_ADDRESS"
 ;;
 3)
+ROUTER_ADDRESS="$TUN_ADRESS"
+;;
+4)
 ROUTER_ADDRESS="$HOME_ADDRESS"
 ;;
 esac
+clear
 
-#Port select
-read -e -p "Enter what port Demonsaw will talk on (most be 1024 or above otherwise root is needed) untouched Default port=:" -i "$PORT_NUMBER" PORT_NUMBER
+read -e -p "Enter what port Demonsaw will talk on (most be 1024 or above, Default port=:" -i "$PORT_NUMBER" PORT_NUMBER
 echo "You entered: $PORT_NUMBER"
-
-#Get teh Demons
-if [ ! -d $FILEPATHDS/demonsaw ]; then
- mkdir $FILEPATHDS/demonsaw
- wget https://demonsaw.com/download/3.1.0/demonsaw_debian_64.tar.gz -P /tmp/
- tar -xvzf /tmp/demonsaw_debian_64.tar.gz -C $FILEPATHDS/demonsaw/
- rm /tmp/demonsaw_debian_64.tar.gz*
-else echo "you already have demonsaw downloaded and extracted it nice"
-fi
-
-#Check for .toml
-if [ ! -f $FILEPATHDS/demonsaw/demonsaw.toml ]; then
- echo "demonsaw.toml not found, lets fix that!"
- touch $FILEPATHDS/demonsaw/demonsaw.toml
- else echo "looks like you already have the config file (demonsaw.toml) let update"
-fi
 
 #Make the .toml file
 (
 echo -e "[demonsaw]\nversion = 0\n[[router]]\naddress = '$ROUTER_ADDRESS'\nport = $PORT_NUMBER\nthreads = 128\n[router.network]\nredirect = 'https://demonsaw.com'\nmotd = 'Roadwarriors Demonsaw/Enigma router'\n[[router.transfer]]\nport = $PORT_NUMBER\nname = '[transfer router 1]'\naddress = '$ROUTER_ADDRESS'\n" )>$FILEPATHDS/demonsaw/demonsaw.toml
+clear
 
-echo "Config Done"
-echo "Your router is going to be avalible with ip=$ROUTER_ADDRESS port=$PORT_NUMBER"
+echo "-- Config Done --"
+echo ""
+echo "-- Your router is going to be avalible at ip $ROUTER_ADDRESS:$PORT_NUMBER"
+echo ""
+echo "-- If you selected to host it at home you need to setup portforward on $LAN_ADDRESS:$PORT_NUMBER then you can connect with $WAN_ADDRESS:$PORT_NUMBER"
+echo ""
+echo "-- If you selected to host it over a VPN $WAN_ADDRESS:$PORT_NUMBER"
+echo ""
 echo "What do you want to do now?"
  echo "   1) Start router (one time)"
  echo "   2) Start router on boot (Presistance)"
- echo "   3) Start router (in window only testing)"
+ echo "   3) Start router (window only, testing)"
  echo "   4) Exit)"
   read -p "Select an option [1-4]:" ROUTER_START
  case $ROUTER_START in
 1)
 cd "$FILEPATHDS/demonsaw/"
 nohup ./demonsaw_cli >/dev/null 2>&1 &
+clear
+echo "one time background service now active"
+echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
 echo "Your done, have a nice day"
 ;;
 2)
 touch $FILEPATHDS/demonsaw/autostart
+ (crontab -l 2>/dev/null; echo "@reboot bash $FILEPATHDS/demonsaw/autostart") | crontab -
 (echo -e "cd $FILEPATHDS/demonsaw\nnohup ./demonsaw_cli >/dev/null 2>&1 &")>$FILEPATHDS/demonsaw/autostart
-(crontab -l 2>/dev/null; echo "@reboot bash $FILEPATHDS/demonsaw/autostart") | crontab -
 cd "$FILEPATHDS/demonsaw/"
 nohup ./demonsaw_cli >/dev/null 2>&1 &
+clear
+echo "Presistance added and router avalibe on start up"
+echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
 echo "Your done, have a nice day"
 ;;
 3)
+clear
+echo "Your done, have a nice day"
+echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
 cd "$FILEPATHDS/demonsaw/"
 ./demonsaw_cli
 ;;
 4)
-exit
+exit 0
 ;;
 esac
