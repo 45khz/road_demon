@@ -6,10 +6,11 @@ This is bash script are going to install Demonsaw router on your server and have
 `wget https://git.io/vMQ49 -O road_demon && bash road_demon`
 
 ### To-do
-* Portforward
 * Router group settings
+
 ### done
-* update to screen as for background process
+* update to screen as for background process v0.2
+* Portforward v0.3
 
 ### want to run your own Router and dont have a VPS to run it
 I can recomend [Vultr] (http://www.vultr.com/?ref=7068412) stable, fast and good performance

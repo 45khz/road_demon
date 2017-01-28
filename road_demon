@@ -4,25 +4,29 @@
 
 #Vars
 FILEPATHDS="$HOME"
-USER="non-root"
 ROUTER_ADDRESS="0.0.0.0"
 HOME_ADDRESS="127.0.0.1"
 WAN_ADDRESS="$(wget -qO- ipv4.icanhazip.com)"
 LAN_ADDRESS="$(ip addr | grep 'inet' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)"
 TUN_ADRESS="$(ip addr | grep 'tun0' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)"
 PORT_NUMBER="8080"
+FW_PORT_NUMBER="$PORT_NUMBER"
 
 clear
-  echo "Welcom to the Roadwarrior installation of Demonsaw router"
-  echo ""
-  echo "First step is to install screen its used so we can run Demonsaw in the background"
+echo "Welcom to the Roadwarrior installation of Demonsaw router"
+echo ""
+#check if screen is present
+if which screen >/dev/null; then
+  echo "Perfect you already have screen installed"
+else
+  echo "looks like your missing screen lets fix that, its used so we can run Demonsaw in the background"
   echo "The code that is going to be run is (apt-get update && apt-get install screen)"
-  echo "please enter su(root) password"
-su -c 'apt-get update && apt-get install screen'
+  su -c 'apt-get update && apt-get install screen'
+fi
 
 #Install path
-read -e -p "Enter where do you want Demonsaw to be installed if untouched Default path= " -i "$FILEPATHDS" FILEPATHDS
-  echo "You entered: $FILEPATHDS"
+read -e -p "Enter where you want Demonsaw to be installed if untouched Default path= " -i "$FILEPATHDS" FILEPATHDS
+echo "You entered: $FILEPATHDS"
 
 #Get teh Demons
 if [ ! -f $FILEPATHDS/demonsaw/demonsaw_cli ]; then
@@ -30,14 +34,16 @@ if [ ! -f $FILEPATHDS/demonsaw/demonsaw_cli ]; then
   wget https://demonsaw.com/download/3.1.0/demonsaw_debian_64.tar.gz -P /tmp/
   tar -xvzf /tmp/demonsaw_debian_64.tar.gz -C $FILEPATHDS/demonsaw/
   rm /tmp/demonsaw_debian_64.tar.gz*
-else echo "you already have demonsaw downloaded and extracted it nice"
+else
+  echo "you already have demonsaw downloaded and extracted it, nice"
 fi
 
 #Make .toml
 if [ ! -f $FILEPATHDS/demonsaw/demonsaw.toml ]; then
   echo "demonsaw.toml not found, lets fix that!"
   touch $FILEPATHDS/demonsaw/demonsaw.toml
-else echo "looks like you already have the config file (demonsaw.toml) let update"
+ else
+  echo "looks like you already have the config file (demonsaw.toml) let's update"
 fi
 clear
 
@@ -55,8 +61,8 @@ echo "Enter how the router are going be hosted"
   echo "   2) LAN $LAN_ADDRESS (Internal Home)"
   echo "   3) VPN $TUN_ADRESS (VPN with portforward)"
   echo "   4) LOCAL $HOME_ADDRESS (Localhost)"
-    read -p "Select an option [1-4]:" ROUTER_ADDRESS
-    case $ROUTER_ADDRESS in
+   read -p "Select an option [1-4]:" ROUTER_ADDRESS
+ case $ROUTER_ADDRESS in
 1)
 ROUTER_ADDRESS="$WAN_ADDRESS"
 ;;
@@ -72,8 +78,24 @@ ROUTER_ADDRESS="$HOME_ADDRESS"
 esac
 clear
 
-read -e -p "Enter what port Demonsaw will talk on (most be 1024 or above, Default port=:" -i "$PORT_NUMBER" PORT_NUMBER
-  echo "You entered: $PORT_NUMBER"
+#Port for the server
+read -e -p "Enter what port Demonsaw will talk on (most be 1024 or above can be forwarded with iptables, Default port=:" -i "$PORT_NUMBER" PORT_NUMBER
+echo "You entered: $PORT_NUMBER"
+#Portforward the routers port to another port for external use
+echo "Do you want to change the port for Demonsaw? (server will run on the port $PORT_NUMBER and if selected new port)"
+  echo "   1) Yes, Enable portforward )"
+  echo "   2) No, thanks )"
+   read -p "Select an option [1-2]:" FW_PORT
+ case $FW_PORT in
+1)
+ read -e -p "Enter the new port for Demonsaw=:" -i "$FW_PORT_NUMBER" FW_PORT_NUMBER
+ echo "You entered: $FW_PORT_NUMBER"
+ su -c "echo "1" > /proc/sys/net/ipv4/ip_forward && iptables -t nat -A PREROUTING -i eth0 -p tcp --dport $FW_PORT_NUMBER -j REDIRECT --to-port $PORT_NUMBER"
+;;
+2)
+ echo ":$PORT_NUMBER will be used"
+;;
+esac
 
 #Make the .toml file
 (echo -e "[demonsaw]\nversion = 0\n[[router]]\naddress = '$ROUTER_ADDRESS'\nport = $PORT_NUMBER\nthreads = 128\n[router.network]\nredirect = 'https://demonsaw.com'\nmotd = 'Roadwarriors Demonsaw/Enigma router'\n[[router.transfer]]\nport = $PORT_NUMBER\nname = '[transfer router 1]'\naddress = '$ROUTER_ADDRESS'\n" )>$FILEPATHDS/demonsaw/demonsaw.toml
@@ -81,11 +103,11 @@ clear
 
 echo "-- Config Done --"
 echo ""
-echo "-- Your router is going to be avalible at ip $ROUTER_ADDRESS:$PORT_NUMBER"
+echo "-- Your router is going to be avalible at ip $ROUTER_ADDRESS:$FW_PORT_NUMBER"
 echo ""
-echo "-- If you selected to host it at home you need to setup portforward on $LAN_ADDRESS:$PORT_NUMBER then you can connect with $WAN_ADDRESS:$PORT_NUMBER"
+echo "-- If you selected to host it at home you need to setup portforward on $LAN_ADDRESS:$FW_PORT_NUMBER then you can connect with $WAN_ADDRESS:$FW_PORT_NUMBER"
 echo ""
-echo "-- If you selected to host it over a VPN $WAN_ADDRESS:$PORT_NUMBER"
+echo "-- If you selected to host it over a VPN $WAN_ADDRESS:$FW_PORT_NUMBER"
 echo ""
 echo "What do you want to do now?"
   echo "   1) Start router (one time)"
@@ -93,31 +115,31 @@ echo "What do you want to do now?"
   echo "   3) Start router (window only, testing)"
   echo "   4) Exit)"
    read -p "Select an option [1-4]:" ROUTER_START
-   case $ROUTER_START in
+ case $ROUTER_START in
 1)
-  cd "$FILEPATHDS/demonsaw/"
-  screen -h 1024 -dmS demonsaw ./demonsaw_cli
-  clear
-echo "one time background service now active"
-echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
-echo "to enter the screen session enter (screen -r demonsaw) WITHOUT () into terminal, and exit by ctrl+a followed by pressing d (detached)"
-echo "Your done, have a nice day"
+ cd "$FILEPATHDS/demonsaw/"
+ screen -h 1024 -dmS demonsaw ./demonsaw_cli
+ clear
+  echo "one time background service now active"
+  echo "The router is now avalible at $ROUTER_ADDRESS:$FW_PORT_NUMBER"
+  echo "to enter the screen session enter (screen -r demonsaw) WITHOUT () into terminal"
+  echo "Your done, have a nice day"
 ;;
 2)
-  touch $FILEPATHDS/demonsaw/autostart
-  (crontab -l 2>/dev/null; echo "@reboot bash $FILEPATHDS/demonsaw/autostart") | crontab -
-  (echo -e "cd $FILEPATHDS/demonsaw\nscreen -h 1024 -dmS demonsaw ./demonsaw_cli")>$FILEPATHDS/demonsaw/autostart
-  cd "$FILEPATHDS/demonsaw/"
-  screen -h 1024 -dmS demonsaw ./demonsaw_cli
-  clear
-echo "Presistance added and router avalibe on start up"
-echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
-echo "Your done, have a nice day"
+ touch $FILEPATHDS/demonsaw/autostart
+ (crontab -l 2>/dev/null; echo "@reboot bash $FILEPATHDS/demonsaw/autostart") | crontab -
+ (echo -e "cd $FILEPATHDS/demonsaw\nscreen -h 1024 -dmS demonsaw ./demonsaw_cli")>$FILEPATHDS/demonsaw/autostart
+ cd "$FILEPATHDS/demonsaw/"
+ screen -h 1024 -dmS demonsaw ./demonsaw_cli
+ clear
+  echo "Presistance added and router avalibe on start up"
+  echo "The router is now avalible at $ROUTER_ADDRESS:$FW_PORT_NUMBER"
+  echo "Your done, have a nice day"
 ;;
 3)
 clear
-echo "Your done, have a nice day"
-echo "The router is now avalible at $ROUTER_ADDRESS:$PORT_NUMBER"
+ echo "Your done, have a nice day"
+ echo "The router is now avalible at $ROUTER_ADDRESS:$FW_PORT_NUMBER"
   cd "$FILEPATHDS/demonsaw/"
   ./demonsaw_cli
 ;;
