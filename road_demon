@@ -20,8 +20,8 @@ if which screen >/dev/null; then
   echo "Perfect you already have screen installed"
 else
   echo "looks like your missing screen lets fix that, its used so we can run Demonsaw in the background"
-  echo "The code that is going to be run is (apt-get update && apt-get install screen)"
-  su -c 'apt-get update && apt-get install screen'
+  echo "The code that is going to be run is (apt-get update && apt-get install screen && apt-get install iptables-persistent)"
+  su -c 'apt-get update && apt-get install screen && apt-get install iptables-persistent'
 fi
 
 #Install path
@@ -90,7 +90,7 @@ echo "Do you want to change the port for Demonsaw? (server will run on the port 
 1)
  read -e -p "Enter the new port for Demonsaw=:" -i "$FW_PORT_NUMBER" FW_PORT_NUMBER
  echo "You entered: $FW_PORT_NUMBER"
- su -c "echo "1" > /proc/sys/net/ipv4/ip_forward && iptables -t nat -A PREROUTING -i eth0 -p tcp --dport $FW_PORT_NUMBER -j REDIRECT --to-port $PORT_NUMBER"
+ su -c "echo "1" > /proc/sys/net/ipv4/ip_forward && iptables -t nat -A PREROUTING -i eth0 -p tcp --dport $FW_PORT_NUMBER -j REDIRECT --to-port $PORT_NUMBER && dpkg-reconfigure iptables-persistent"
 ;;
 2)
  echo ":$PORT_NUMBER will be used"
