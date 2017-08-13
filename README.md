@@ -1,5 +1,5 @@
 # road_demon
-This is bash script are going to install Demonsaw router on your server and have it up and running in a very simple way, without root !
+This is bash script are going to install Demonsaw v.3 router on your server and have it up and running in a very simple way.
 (tested on Debian 8)
 
 ### Installation
